@@ -5,6 +5,8 @@ import pandas as pd
 from scipy.stats import mode
 from sklearn.metrics import accuracy_score
 from sklearn.feature_selection import VarianceThreshold
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
 
 from datasetutils import load_dataset, split_dataset
 from binarization import preprocess_features, apply_preprocess_to_test, thermometer_encode
@@ -39,17 +41,20 @@ def save_prediction_distribution_plot(y_pred_enc, label_encoder, model_name,
     labels = label_encoder.inverse_transform(y_pred_enc)
     counts = pd.Series(labels).value_counts().sort_index()
 
-    plt.figure()
-    counts.plot(kind="bar")
-    plt.title(f"Distribuição de classes preditas - {model_name}")
+    plt.figure(figsize=(8, 4))
+    plt.plot(counts.index, counts.values, marker='o', linestyle='-', linewidth=2)
+
+    plt.title(f"Distribuição de classes{model_name}")
     plt.xlabel("Classe")
     plt.ylabel("Número de amostras")
+    plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
 
     out_path = os.path.join(output_dir, f"{model_name.lower().replace(' ', '')}preddistribution.png")
     plt.savefig(out_path, dpi=300)
     plt.close()
     print(f"Gráfico de distribuição ({model_name}) salvo em: {out_path}")
+
 
 
 def save_wisardheatmap(results_wisard, output_dir="results/plots"):
@@ -144,6 +149,42 @@ def save_confusion_matrix(y_true_enc, y_pred_enc, label_encoder,
     plt.close()
 
     print(f"Matriz de confusão ({model_name}) salva em: {out_path}")
+
+def save_combined_confusion_matrices(
+    y_true,
+    y_pred_wisard,
+    y_pred_rf,
+    y_pred_svm,
+    y_pred_knn,
+    label_encoder,
+    output_path="results/confusionmatrix/all_models_confusion.png",
+):
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    labels = label_encoder.classes_
+
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+
+    modelos = [
+        ("WiSARD",      y_pred_wisard, axes[0, 0]),
+        ("RandomForest", y_pred_rf,    axes[0, 1]),
+        ("SVM",         y_pred_svm,   axes[1, 0]),
+        ("KNN",         y_pred_knn,   axes[1, 1]),
+    ]
+
+    for nome, y_pred, ax in modelos:
+        cm = confusion_matrix(y_true, y_pred, labels=range(len(labels)))
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+        disp.plot(ax=ax, colorbar=False)
+        ax.set_title(nome)
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("True")
+
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=300)
+    plt.close(fig)
+    print(f"Matriz de confusão comparativa salva em: {output_path}")
 
 def save_model_prediction_csvs(X_test_df, y_test_enc, y_pred_enc, label_encoder,
                                model_name, output_dir="results/model_predictions"):
@@ -294,6 +335,7 @@ def main():
     save_prediction_distribution_plot(best_y_pred_enc, label_encoder, "WiSARD")
     save_prediction_distribution_plot(y_pred_rf, label_encoder, "Random Forest")
     save_prediction_distribution_plot(y_pred_svm, label_encoder, "SVM")
+    save_prediction_distribution_plot(y_pred_knn, label_encoder, "KNN")
 
     save_wisardheatmap(results_wisard)
     save_wisardaccuracycurves(results_wisard)
@@ -306,6 +348,17 @@ def main():
 
     save_confusion_matrix(y_test, y_pred_svm, label_encoder, "SVM")
 
+    save_confusion_matrix(y_test, y_pred_knn, label_encoder, "KNN")
+
+    save_combined_confusion_matrices(
+    y_test,
+    best_y_pred_enc,
+    y_pred_rf,
+    y_pred_svm,
+    y_pred_knn,
+    label_encoder
+    )
+
     print("\nGerando CSVs separados por classe predita...")
 
     save_class_split_predictions(X_test_df, y_test, best_y_pred_enc,
@@ -316,6 +369,9 @@ def main():
 
     save_class_split_predictions(X_test_df, y_test, y_pred_svm,
                                 label_encoder, "SVM")
+
+    save_class_split_predictions(X_test_df, y_test, y_pred_knn,
+                                label_encoder, "KNN")
 
 if __name__ == "__main__":
     main()
