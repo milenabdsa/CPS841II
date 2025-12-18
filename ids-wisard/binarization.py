@@ -45,13 +45,18 @@ def apply_preprocess_to_test(X_test: pd.DataFrame, scaler, feature_order):
     return X_scaled
 
 
-def thermometer_encode(X: np.ndarray, n_bits: int = 8) -> np.ndarray:
+def onehot_binning_encode(X: np.ndarray, n_bins: int = 8) -> np.ndarray:
+    X = np.asarray(X, dtype=np.float32)
     n_samples, n_features = X.shape
 
-    thresholds = np.linspace(0, 1, n_bits + 1, endpoint=True)[1:] 
+    X = np.clip(X, 0.0, 1.0)
 
-    X_expanded = X[:, :, None]  
-    bits = (X_expanded >= thresholds).astype(np.uint8)  
+    bin_idx = np.floor(X * n_bins).astype(np.int32)
+    bin_idx = np.clip(bin_idx, 0, n_bins - 1)
 
+    out = np.zeros((n_samples, n_features * n_bins), dtype=np.uint8)
 
-    return bits.reshape(n_samples, n_features * n_bits)
+    for j in range(n_features):
+        out[np.arange(n_samples), j * n_bins + bin_idx[:, j]] = 1
+
+    return out

@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 
 from datasetutils import load_dataset, split_dataset
-from binarization import preprocess_features, apply_preprocess_to_test, thermometer_encode
+from binarization import preprocess_features, apply_preprocess_to_test, onehot_binning_encode
 from wisardmodel import WiSARD
 from baselines import train_random_forest, train_svm, train_knn
 
@@ -305,8 +305,8 @@ def main():
     np.save("X_train_scaled.npy", X_train_scaled)
     np.save("X_test_scaled.npy", X_test_scaled)
 
-    bits_options = [2, 3, 4, 5, 6, 8, 16]
-    tuple_sizes = [8, 16, 24, 32, 40, 48]
+    bits_options = [2, 3, 4, 5, 6, 8, 12, 16, 24, 32]
+    tuple_sizes = [8, 16, 24, 32, 40, 48, 56, 64, 80]
 
     best_acc = 0.0
     best_conf = None
@@ -317,8 +317,8 @@ def main():
 
     for N_BITS in bits_options:
         print(f"\n>> Testando N_BITS = {N_BITS}")
-        X_train_bin = thermometer_encode(X_train_scaled, n_bits=N_BITS)
-        X_test_bin = thermometer_encode(X_test_scaled, n_bits=N_BITS)
+        X_train_bin = onehot_binning_encode(X_train_scaled, n_bins=N_BITS)
+        X_test_bin = onehot_binning_encode(X_test_scaled, n_bins=N_BITS)
 
         rng = np.random.RandomState(42)
         perm = rng.permutation(X_train_bin.shape[1])
@@ -432,3 +432,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
