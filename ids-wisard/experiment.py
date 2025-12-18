@@ -42,13 +42,12 @@ def save_prediction_distribution_plot(y_pred_enc, label_encoder, model_name,
     counts = pd.Series(labels).value_counts().sort_index()
 
     plt.figure(figsize=(8, 4))
-    plt.plot(counts.index, counts.values, marker='o', linestyle='-', linewidth=2)
-
-    plt.title(f"Distribuição de classes{model_name}")
+    plt.bar(counts.index, counts.values)
+    plt.title(f"Distribuição de classes preditas - {model_name}")
     plt.xlabel("Classe")
     plt.ylabel("Número de amostras")
-    plt.grid(True, linestyle='--', alpha=0.5)
     plt.tight_layout()
+
 
     out_path = os.path.join(output_dir, f"{model_name.lower().replace(' ', '')}preddistribution.png")
     plt.savefig(out_path, dpi=300)
@@ -226,6 +225,56 @@ def save_class_split_predictions(X_test_df, y_test_enc, y_pred_enc, label_encode
         df_label.to_csv(out_path, index=False)
         print(f"CSV {model_name} = {pred_label}: {out_path}")
 
+def save_combined_prediction_histogram(
+    y_pred_wisard,
+    y_pred_rf,
+    y_pred_knn,
+    y_pred_svm,
+    label_encoder,
+    output_dir="results/plots"):
+
+    import os
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    labels_w = pd.Series(label_encoder.inverse_transform(y_pred_wisard))
+    labels_rf = pd.Series(label_encoder.inverse_transform(y_pred_rf))
+    labels_knn = pd.Series(label_encoder.inverse_transform(y_pred_knn))
+    labels_svm = pd.Series(label_encoder.inverse_transform(y_pred_svm))
+
+    classes = sorted(label_encoder.classes_)
+
+    counts_w = labels_w.value_counts().reindex(classes, fill_value=0)
+    counts_rf = labels_rf.value_counts().reindex(classes, fill_value=0)
+    counts_knn = labels_knn.value_counts().reindex(classes, fill_value=0)
+    counts_svm = labels_svm.value_counts().reindex(classes, fill_value=0)
+
+    x = range(len(classes))
+    width = 0.2
+
+    plt.figure(figsize=(10, 5))
+
+    plt.bar([i - 1.5*width for i in x], counts_w, width=width, color="#4C72B0", label="WiSARD")
+    plt.bar([i - 0.5*width for i in x], counts_rf, width=width, color="#9DB4E0", label="Random Forest")
+    plt.bar([i + 0.5*width for i in x], counts_knn, width=width, color="#55A868", label="KNN")
+    plt.bar([i + 1.5*width for i in x], counts_svm, width=width, color="#A8D5BA", label="SVM")
+
+    plt.xticks(x, classes)
+    plt.xlabel("Classe")
+    plt.ylabel("Número de amostras")
+    plt.title("Distribuição comparativa das classes preditas")
+    plt.legend()
+    plt.tight_layout()
+
+    out_path = os.path.join(output_dir, "combinedpreddistribution.png")
+    plt.savefig(out_path, dpi=300)
+    plt.close()
+
+    print(f"Histograma comparativo salvo em: {out_path}")
+
+
 def main():
     print("Carregamento do dataset IoT-SDN IDS")
     X, y = load_dataset()
@@ -372,6 +421,14 @@ def main():
 
     save_class_split_predictions(X_test_df, y_test, y_pred_knn,
                                 label_encoder, "KNN")
+
+    save_combined_prediction_histogram(
+    best_y_pred_enc,
+    y_pred_rf,
+    y_pred_knn,
+    y_pred_svm,
+    label_encoder
+    )
 
 if __name__ == "__main__":
     main()
