@@ -108,14 +108,18 @@ def save_wisardaccuracycurves(results_wisard, output_dir="results/plots"):
                 ys.append(match["accuracy"] * 100.0)
 
         if xs:
-            plt.plot(xs, ys, marker="o", label=f"N_BITS={b}")
+            plt.plot(xs, ys, linewidth=2, label=f"N_BITS={b}")
 
     plt.xlabel("tuple_size")
     plt.ylabel("Acurácia (%)")
     plt.title("Curvas de acurácia da WiSARD por N_BITS")
     plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
+    plt.legend(
+    loc="center left",
+    bbox_to_anchor=(1.02, 0.5),
+    fontsize=8
+    )
+    plt.tight_layout(rect=[0, 0, 0.8, 1])
 
     out_path = os.path.join(output_dir, "wisardaccuracycurves.png")
     plt.savefig(out_path, dpi=300)
@@ -124,6 +128,107 @@ def save_wisardaccuracycurves(results_wisard, output_dir="results/plots"):
 
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
+
+def save_wisardaccuracycurves_filtered_bits(
+    results_wisard,
+    output_dir="results/plots"
+    ):
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    allowed_bits = {2, 3, 4, 5, 6, 8, 16}
+
+    bits = sorted(
+        b for b in {r["n_bits"] for r in results_wisard}
+        if b in allowed_bits
+    )
+
+    tuples = sorted({r["tuple_size"] for r in results_wisard})
+
+    plt.figure()
+
+    for b in bits:
+        xs, ys = [], []
+        for t in tuples:
+            match = next(
+                (r for r in results_wisard
+                 if r["n_bits"] == b and r["tuple_size"] == t),
+                None
+            )
+            if match is not None:
+                xs.append(t)
+                ys.append(match["accuracy"] * 100.0)
+
+        if xs:
+            plt.plot(xs, ys, linewidth=2, label=f"N_BITS={b}")
+
+    plt.xlabel("tuple_size")
+    plt.ylabel("Acurácia (%)")
+    plt.title("Curvas de acurácia da WiSARD (N_BITS selecionados)")
+    plt.grid(True, alpha=0.3)
+
+    plt.legend(
+        loc="center left",
+        bbox_to_anchor=(1.02, 0.5),
+        fontsize=8
+    )
+
+    plt.tight_layout(rect=[0, 0, 0.8, 1])
+
+    out_path = os.path.join(
+        output_dir,
+        "wisardaccuracycurves_filtered_bits.png"
+    )
+    plt.savefig(out_path, dpi=300)
+    plt.close()
+
+    print(f"Curvas de acurácia (N_BITS filtrados) salvas em: {out_path}")
+
+
+def save_wisardaccuracycurves_swapped(results_wisard, output_dir="results/plots"):
+    os.makedirs(output_dir, exist_ok=True)
+
+    bits = sorted({r["n_bits"] for r in results_wisard})
+    allowed_tuples = {24, 40, 64, 80, 112, 128}
+    tuples = sorted(
+    t for t in {r["tuple_size"] for r in results_wisard}
+    if t in allowed_tuples
+    )
+
+    plt.figure()
+
+    for t in tuples:
+        xs, ys = [], []
+        for b in bits:
+            match = next(
+                (r for r in results_wisard
+                 if r["n_bits"] == b and r["tuple_size"] == t),
+                None
+            )
+            if match is not None:
+                xs.append(b)
+                ys.append(match["accuracy"] * 100.0)
+
+        if xs:
+            plt.plot(xs, ys, linewidth=2, label=f"tuple_size={t}")
+
+    plt.xlabel("N_BITS")
+    plt.ylabel("Acurácia (%)")
+    plt.title("Curvas de acurácia da WiSARD por tuple_size")
+    plt.grid(True, alpha=0.3)
+    plt.legend(
+    loc="center left",
+    bbox_to_anchor=(1.02, 0.5),
+    fontsize=8
+    )
+    plt.tight_layout(rect=[0, 0, 0.8, 1])
+
+    out_path = os.path.join(output_dir, "wisardaccuracycurves_swapped.png")
+    plt.savefig(out_path, dpi=300)
+    plt.close()
+
+    print(f"Curvas de acurácia (eixos invertidos) salvas em: {out_path}")
+
 
 def save_confusion_matrix(y_true_enc, y_pred_enc, label_encoder,
                           model_name, output_dir="results/confusionmatrix"):
@@ -342,8 +447,8 @@ def main():
     np.save("X_train_scaled.npy", X_train_scaled)
     np.save("X_test_scaled.npy", X_test_scaled)
 
-    bits_options = [2, 3, 4, 5, 6, 8, 12, 16, 24, 32]
-    tuple_sizes = [8, 16, 24, 32, 40, 48, 56, 64, 80]
+    bits_options = [2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48]
+    tuple_sizes  = [8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128]
 
     best_acc = 0.0
     best_conf = None
@@ -425,6 +530,9 @@ def main():
 
     save_wisardheatmap(results_wisard)
     save_wisardaccuracycurves(results_wisard)
+    save_wisardaccuracycurves_swapped(results_wisard)
+    save_wisardaccuracycurves_filtered_bits(results_wisard)
+
 
     print("\nGerando matrizes de confusão...")
 
