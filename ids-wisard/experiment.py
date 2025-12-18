@@ -149,6 +149,43 @@ def save_confusion_matrix(y_true_enc, y_pred_enc, label_encoder,
 
     print(f"Matriz de confusão ({model_name}) salva em: {out_path}")
 
+def save_confusion_matrix_wisard_pretty(
+    y_true_enc,
+    y_pred_enc,
+    label_encoder,
+    output_dir="results/confusionmatrix"
+):
+    os.makedirs(output_dir, exist_ok=True)
+    labels = label_encoder.classes_
+
+    cm = confusion_matrix(
+        y_true_enc,
+        y_pred_enc,
+        labels=range(len(labels)),
+        normalize="true"
+    )
+
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt=".2f",
+        cmap="Blues",
+        xticklabels=labels,
+        yticklabels=labels
+    )
+
+    plt.title("Matriz de Confusão (normalizada) - WiSARD")
+    plt.xlabel("Predição")
+    plt.ylabel("Verdadeiro")
+
+    out_path = os.path.join(output_dir, "wisard2.png")
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=300)
+    plt.close()
+
+    print(f"Matriz de confusão (WiSARD II) salva em: {out_path}")
+
 def save_combined_confusion_matrices(
     y_true,
     y_pred_wisard,
@@ -391,7 +428,7 @@ def main():
 
     print("\nGerando matrizes de confusão...")
 
-    save_confusion_matrix(y_test, best_y_pred_enc, label_encoder, "WiSARD")
+    save_confusion_matrix_wisard_pretty(y_test, best_y_pred_enc, label_encoder)
 
     save_confusion_matrix(y_test, y_pred_rf, label_encoder, "Random Forest")
 
@@ -432,4 +469,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
