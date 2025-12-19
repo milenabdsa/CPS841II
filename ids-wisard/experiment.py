@@ -41,8 +41,18 @@ def save_prediction_distribution_plot(y_pred_enc, label_encoder, model_name,
     labels = label_encoder.inverse_transform(y_pred_enc)
     counts = pd.Series(labels).value_counts().sort_index()
 
+    color_map = {
+        "WiSARD": "#4C72B0",         
+        "Random Forest": "#9DB4E0",  
+        "KNN": "#55A868",            
+        "SVM": "#A8D5BA",             
+    }
+
+    bar_color = color_map.get(model_name, "#999999")
+
     plt.figure(figsize=(8, 4))
-    plt.bar(counts.index, counts.values)
+    plt.bar(counts.index, counts.values, color=bar_color)
+
     plt.title(f"Distribuição de classes preditas - {model_name}")
     plt.xlabel("Classe")
     plt.ylabel("Número de amostras")
@@ -97,7 +107,7 @@ def save_wisardaccuracycurves(results_wisard, output_dir="results/plots"):
     bits = sorted({r["n_bits"] for r in results_wisard})
     tuples = sorted({r["tuple_size"] for r in results_wisard})
 
-    plt.figure()
+    plt.figure(figsize=(12, 4))
     for b in bits:
         xs, ys = [], []
         for t in tuples:
@@ -145,7 +155,7 @@ def save_wisardaccuracycurves_filtered_bits(
 
     tuples = sorted({r["tuple_size"] for r in results_wisard})
 
-    plt.figure()
+    plt.figure(figsize=(12, 4))
 
     for b in bits:
         xs, ys = [], []
@@ -195,7 +205,7 @@ def save_wisardaccuracycurves_swapped(results_wisard, output_dir="results/plots"
     if t in allowed_tuples
     )
 
-    plt.figure()
+    plt.figure(figsize=(12, 4))
 
     for t in tuples:
         xs, ys = [], []
@@ -416,6 +426,63 @@ def save_combined_prediction_histogram(
 
     print(f"Histograma comparativo salvo em: {out_path}")
 
+def save_model_accuracy_comparison(
+    acc_wisard,
+    acc_rf,
+    acc_knn,
+    acc_svm,
+    output_dir="results/plots"
+):
+    """
+    Histograma comparativo de acurácia entre modelos.
+    Eixo X: Modelo
+    Eixo Y: Acurácia (%)
+    """
+    import os
+    import matplotlib.pyplot as plt
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    models = ["WiSARD", "Random Forest", "KNN", "SVM"]
+    accuracies = [
+        acc_wisard * 100.0,
+        acc_rf * 100.0,
+        acc_knn * 100.0,
+        acc_svm * 100.0,
+    ]
+
+    colors = [
+        "#4C72B0",  
+        "#9DB4E0", 
+        "#55A868",  
+        "#A8D5BA",  
+    ]
+
+    plt.figure(figsize=(7, 4))
+    bars = plt.bar(models, accuracies, color=colors)
+
+    plt.ylabel("Acurácia (%)")
+    plt.xlabel("Modelo")
+    plt.title("Comparação de Acurácia entre Modelos")
+
+    for bar, acc in zip(bars, accuracies):
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.5,
+            f"{acc:.2f}%",
+            ha="center",
+            va="bottom",
+            fontsize=9
+        )
+
+    plt.ylim(0, 105)
+    plt.tight_layout()
+
+    out_path = os.path.join(output_dir, "model_accuracy_comparison.png")
+    plt.savefig(out_path, dpi=300)
+    plt.close()
+
+    print(f"Histograma comparativo de acurácia salvo em: {out_path}")
 
 def main():
     print("Carregamento do dataset IoT-SDN IDS")
@@ -521,7 +588,11 @@ def main():
     print(f"SVM (Linear):  {acc_svm * 100:.2f}%")
     print(f"KNN:           {acc_knn * 100:.2f}%")
 
-    #save_wisard_prediction_csvs(X_test_df, y_test, best_y_pred_enc, label_encoder)
+    save_model_accuracy_comparison(
+    best_acc,
+    acc_rf,
+    acc_knn,
+    acc_svm)
 
     save_prediction_distribution_plot(best_y_pred_enc, label_encoder, "WiSARD")
     save_prediction_distribution_plot(y_pred_rf, label_encoder, "Random Forest")
@@ -532,7 +603,6 @@ def main():
     save_wisardaccuracycurves(results_wisard)
     save_wisardaccuracycurves_swapped(results_wisard)
     save_wisardaccuracycurves_filtered_bits(results_wisard)
-
 
     print("\nGerando matrizes de confusão...")
 
